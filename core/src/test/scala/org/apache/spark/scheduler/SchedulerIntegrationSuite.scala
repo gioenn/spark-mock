@@ -24,6 +24,7 @@ import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
 import scala.concurrent.Future
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.language.existentials
+import scala.language.reflectiveCalls
 import scala.reflect.ClassTag
 
 import org.scalactic.TripleEquals
