@@ -17,7 +17,7 @@
 
 package org.apache.spark.scheduler
 
-import java.io.NotSerializableException
+import java.io.{File, FileOutputStream, NotSerializableException}
 import java.util.Properties
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -31,6 +31,10 @@ import scala.language.postfixOps
 import scala.util.control.NonFatal
 
 import org.apache.commons.lang3.SerializationUtils
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+import org.json4s.jackson.Serialization
+import org.json4s.jackson.Serialization.write
 
 import org.apache.spark._
 import org.apache.spark.broadcast.Broadcast
@@ -959,8 +963,13 @@ class DAGScheduler(
             for (bool <- active.finished) {
               active.finished(i) = true
               active.numFinished += 1
+              val stageIds = jobIdToStageIds(jobId.get).toArray
+              val stageInfos = stageIds.flatMap(id => stageIdToStage.get(id).map(_.latestInfo))
+              DAGSchedulerDataOutputInJSON.AllJobsInContext(jobId.get) = stageInfos
               i = i + 1
             }
+            val obj = new DAGSchedulerDataOutputInJSON()
+            obj.exportTheData()
             cleanupStateForJobAndIndependentStages(active)
             listenerBus.post(SparkListenerJobEnd(jobId.get, clock.getTimeMillis(), JobSucceeded))
             waiter.justSucceedNoComputation()
@@ -1867,4 +1876,27 @@ private[spark] object DAGScheduler {
 
   // Number of consecutive stage attempts allowed before a stage is aborted
   val DEFAULT_MAX_CONSECUTIVE_STAGE_ATTEMPTS = 4
+}
+
+private [scheduler] class DAGSchedulerDataOutputInJSON() {
+  implicit val formats = DefaultFormats
+  def exportTheData() : Unit = {
+    if (DAGSchedulerDataOutputInJSON.AllJobsInContext.size > 0) {
+      val piedPierJSON = write(DAGSchedulerDataOutputInJSON.AllJobsInContext)
+      val fos = new FileOutputStream(new File("data.json"))
+      try {
+        fos.write(piedPierJSON.getBytes("UTF-8"))
+        // scalastyle:off println
+          println(piedPierJSON)
+        // scalastyle:on println
+      } finally {
+        fos.close()
+      }
+    }
+  }
+}
+
+private [spark] object DAGSchedulerDataOutputInJSON {
+  // Initialization of the map storing all the jobs to be outputed in one file
+  val AllJobsInContext = scala.collection.mutable.Map[Int, Array[StageInfo]]()
 }

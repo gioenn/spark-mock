@@ -24,6 +24,12 @@ libraryDependencies += "org.ow2.asm"  % "asm" % "5.1"
 
 libraryDependencies += "org.ow2.asm"  % "asm-commons" % "5.1"
 
+val json4sNative = "org.json4s" %% "json4s-native" % "{latestVersion}"
+
+val json4sJackson = "org.json4s" %% "json4s-jackson" % "{latestVersion}"
+
+val lift_json = "net.liftweb" %% "lift-json" % "3.2.0"
+
 // sbt 1.0.0 support: https://github.com/ihji/sbt-antlr4/issues/14
 addSbtPlugin("com.simplytyped" % "sbt-antlr4" % "0.7.11")
 
