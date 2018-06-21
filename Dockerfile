@@ -48,44 +48,49 @@ ENV JAVA_HOME /usr/lib/jvm/java-${JAVA_MAJOR_VERSION}-oracle
 
 RUN apt-get install git
 
-# Get the modified version of the framework, passing it from the build command to fetch the latest version 
+# Get the modified version of the framework, passing it from the build command to fetch the latest version
 #ARG GIT_REPO=https://github.com/GabrielePrato/SparkUndeployingFrame.git
 #RUN git clone ${GIT_REPO}
 
-# Get the modified version of the framework, to be used if running from local FileSystem 
-ADD . ./
+# Get the modified version of the framework, to be used if running from local FileSystem
 
-WORKDIR SparkUndeployingFrame
+RUN wget https://downloads.lightbend.com/scala/2.12.2/scala-2.12.2.deb
+RUN dpkg -i scala-2.12.2.deb
+
+
+# sbt Installation
+RUN curl -L -o sbt.deb http://dl.bintray.com/sbt/debian/sbt-0.13.15.deb
+RUN dpkg -i sbt.deb
+RUN apt-get update
+RUN apt-get install sbt
+
+WORKDIR /spark-mock
+
+ADD . /spark-mock
+
 
 # Manage execution permission on needed script
 RUN chmod 555 R/install-dev.sh &&\
     chmod 555 build/mvn
 
-# Run all the script needed to install of the framework 
+# Run all the script needed to install of the framework
 ENV R_HOME /usr/lib/R
 RUN ./R/install-dev.sh
 
-# Install sbt 
-RUN echo "deb http://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list &&\
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823 &&\
-    apt-get update &&\
-    apt-get install sbt
 
-# Compile the framework through Sbt
-RUN sbt package 
-RUN sbt assembly 
+RUN update-ca-certificates -f
 
-ENV SPARK_HOME /SparkUndeployingFrame
 
-# Expose a port for the container to be visible from outside 
+
+RUN build/mvn -Dmaven.test.skip=true clean package
+
+ENV SPARK_HOME /spark-mock
+
+# Expose a port for the container to be visible from outside
 expose 4040
 
-# Manage permission for executing 
+# Manage permission for executing
 RUN chmod -R 555 bin
 
-# Define entrypoint for the command 
-CMD ["/SparkUndeployingFrame/bin/spark-submit"]
-
-
-
-
+# Define entrypoint for the command
+CMD ["/spark-mock/bin/spark-submit"]
